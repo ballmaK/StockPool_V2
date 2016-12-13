@@ -5,15 +5,19 @@ Usage: app.py [options] arg
 
 Options:
   -h, --help            show this help message and exit.
-  -F FILTER, --flow-filter=FILTER.
+
+  -F FILTER, --flow-filter=FILTER
                         Filtrate by capital stock in circulation.
+
   -P, --print-out       Decide if to print out result.
-  -D SDATE, --selected-date=SDATE.
+
+  -D SDATE, --selected-date=SDATE
                         Selected date of picking.
-  -t TOPX, --top-X=TOPX.
+  -t TOPX, --top-X=TOPX
                         Picking stock from topX.
 
   Update Options:
+
     These options update all local data.
 
     -d, --update-date   Update all date from 1999.
@@ -22,6 +26,7 @@ Options:
                         Update stock list, from given year(2010 later).
 
   Make Deal Options:
+  
     These options simulate deals.
     e.g: python app.py -f 20100105 -e 20101231 -m 1000000 -n 10
 
@@ -52,3 +57,4 @@ Options:
 
     -a ADAYS, --average-day=ADAYS
                         BR's average day.
+
