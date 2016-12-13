@@ -4,13 +4,13 @@
 Usage: app.py [options] arg
 
 Options:
-  -h, --help            show this help message and exit
-  -F FILTER, --flow-filter=FILTER
+  -h, --help            show this help message and exit.
+  -F FILTER, --flow-filter=FILTER.
                         Filtrate by capital stock in circulation.
   -P, --print-out       Decide if to print out result.
-  -D SDATE, --selected-date=SDATE
+  -D SDATE, --selected-date=SDATE.
                         Selected date of picking.
-  -t TOPX, --top-X=TOPX
+  -t TOPX, --top-X=TOPX.
                         Picking stock from topX.
 
   Update Options:
