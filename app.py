@@ -21,7 +21,7 @@ PH=50
 PL=-15
 STOCKINFO={}
 
-
+# 获取所有交易日
 def __getFullDate(yearStart,yearEnd):
     for year in range(yearStart,yearEnd+1):
         year = str(year)
@@ -31,7 +31,10 @@ def __getFullDate(yearStart,yearEnd):
         url = "q.stock.sohu.com"
         path = "/hisHq?code=zs_000001&start=%s&end=%s&stat=1&order=D&period=d&callback=historySerchHandler&rt=jsonp&r=%s" % (startdate, enddate, timestam)
         content = __httpGetContent(url, path)
+        print content
         datelist = [date[0].replace('-','') for date in json.loads(content[len('historySerchHandler('):-2].replace('%',''), encoding="GBK")[0]['hq']]
+        if not os.path.exists(DATEHIS):
+            os.mkdir(DATEHIS)
         fd = open(os.path.join(DATEHIS,year), 'w+')
         fd.write(json.dumps(datelist))
         fd.close()
@@ -43,6 +46,7 @@ def __getTurnOver(code, year):
     url = "q.stock.sohu.com"
     path = "/hisHq?code=cn_%s&start=%s&end=%s&stat=1&order=D&period=d&callback=historySerchHandler&rt=jsonp&r=%s" % (code, dateStart, dateEnd, timestam)
     content = __httpGetContent(url, path)
+    # print content
     try:
         jsonp = json.loads(content[len('historySerchHandler('):-2].replace('%',''), encoding="GBK")
         stockinfo = jsonp[0]['hq']
@@ -207,23 +211,27 @@ def updateStockDayHistory(code, market, year='2015', type='b'):
     q向前复权
     return dict
     """
-    url = "qd.10jqka.com.cn"
-    path = "/api.php?p=stock_day&info=k_%s_%s&year=%s&fq=%s" % (market, code, year, type)
-    todict = __getTurnOver(code, year)
-    try:
-        content = __httpGetContent(url, path)
-    except:
-        content = None
-        print code, ": Request failed ..."
-    if content:
-        #print code, ": Request success ..."
-        stock_dict = __convert_day(content,todict)
+    if needUpdate(market, code, year, type):
+        url = "qd.10jqka.com.cn"
+        path = "/api.php?p=stock_day&info=k_%s_%s&year=%s&fq=%s" % (market, code, year, type)
+        todict = __getTurnOver(code, year)
         try:
-            updateSingleLocalHistory(market, code, year, type, stock_dict)
-        except Exception, e:
-            #print traceback.print_exc(e)
-            pass
-        return stock_dict
+            content = __httpGetContent(url, path)
+        except:
+            content = None
+            print code, ": Request failed ..."
+        if content:
+            #print code, ": Request success ..."
+            stock_dict = __convert_day(content,todict)
+            try:
+                updateSingleLocalHistory(market, code, year, type, stock_dict)
+            except Exception, e:
+                #print traceback.print_exc(e)
+                pass
+            return stock_dict
+    else:
+        # print '< ' + market + code + ' > need not to update ..'
+        pass
     
 def __getLocalStockInfo(code, market, year, type):
     code = market+code
@@ -251,8 +259,21 @@ def __getMemeryStockInfo(code, market, year, type):
         STOCKINFO[stockcode] = codeMemInfo
         return codeMemInfo
     
+def needUpdate (market, code, year, type):
+    code = market+code
+    need = False
+    if not os.path.exists(os.path.join(DATADIR,code)):
+        need =  True
+    if not os.path.exists(os.path.join(DATADIR,code, year)):
+        need = True
+    if not os.path.exists(os.path.join(DATADIR,code, year, type)):
+        need = True
+    # print os.path.join(DATADIR,code), os.path.join(DATADIR,code, year), os.path.join(DATADIR,code, year, type)
+    return need
+
 def updateSingleLocalHistory(market, code, year, type, stock_dict):
     code = market+code
+    print 'update <', code, '> info ..'
     if os.path.exists(os.path.join(DATADIR,code)):
         if os.path.exists(os.path.join(DATADIR,code, year)):
             if os.path.exists(os.path.join(DATADIR,code, year, type)):
@@ -400,10 +421,12 @@ def getStockCode():
     fdHA = open('data/HA.data','r')
     fdSA = open('data/SA.data','r')
     fdZX = open('data/ZX.data','r')
+    fdCY = open('data/CY.data','r')
     HA = fdHA.read().split()
     SA = fdSA.read().split()
     ZX = fdZX.read().split()
-    allStock = HA+SA+ZX
+    CY = fdCY.read().split()
+    allStock = HA+SA+ZX+CY
     allStockDict = {}
     for stock in allStock:
         k,v = stock.split(',')
@@ -518,6 +541,7 @@ def updateStockCodeList():
     SA = []
     ZX = []
     ST = []
+    CY = []
     ST = [ t[1]+',*ST'+t[0].decode('GBK').encode('utf-8')+'\n' for t in re.findall(p_st, content)]
     #print ST
     #print content.decode('GBK')
@@ -528,26 +552,32 @@ def updateStockCodeList():
             codeCN = re.findall(p_cn, content)[0].decode('GBK').encode('utf-8')
         except Exception, e:
             codeCN = 'NONAME'
-        #print code, codeCN
+        # print code, codeCN
         if code[2:].find('60') == 0:
             HA.append(code+','+codeCN+'\n')
         if code[2:].find('000') == 0:
             SA.append(code+','+codeCN+'\n')
         if code[2:].find('002') == 0:
             ZX.append(code+','+codeCN+'\n')
+        if code[2:].find('300') == 0:
+            CY.append(code+','+codeCN+'\n')
 
-
+    # print CY
     fdHA = open('data/HA.data', 'w+')
     fdSA = open('data/SA.data', 'w+')
     fdZX = open('data/ZX.data', 'w+') 
     fdST = open('data/ST.data', 'w+') 
+    fdCY = open('data/CY.data', 'w+') 
     fdHA.writelines(HA)  
     fdSA.writelines(SA)
     fdZX.writelines(ZX)
     fdST.writelines(ST)
+    fdCY.writelines(CY)
     fdHA.close()
     fdSA.close()
     fdST.close() 
+    fdZX.close()
+    fdCY.close()
     #print content
 
 def makeDeal(s_date, e_date, filter, codeinfo=[], rest_money=1000000, stockpick=10):
@@ -811,7 +841,7 @@ if __name__ == "__main__":
     (options, args) = parser.parse_args()
     if options.update_date:
         print 'Update full date list ...'
-        __getFullDate(2010,2016)
+        __getFullDate(2010,2018)
         print 'Complete ...'
         print 'Update stock list ...'
         updateStockCodeList()
