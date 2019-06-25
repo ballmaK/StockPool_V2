@@ -35,25 +35,14 @@ def init_engine():
 #定义通用方法函数，插入数据库表，并创建数据库主键，保证重跑数据的时候索引唯一。
 def insert_db(data, table_name, primary_keys):
     engine = init_engine()
-    # 使用 http://docs.sqlalchemy.org/en/latest/core/reflection.html
-    # 使用检查检查数据库表是否有主键。
-    insp = inspect(engine)
-    dtype={col_name: NVARCHAR(length=255) for col_name in data.columns.tolist()}
-    dtype['id'] = NVARCHAR(length=255)
-    print dtype
-    data.to_sql(name=table_name, con=engine, if_exists='append', dtype=dtype, index=True, index_label='id')
-    # 判断是否存在主键
-    if insp.get_primary_keys(table_name) == []:
-        with engine.connect() as con:
-            # 执行数据库插入数据。
-            con.execute('ALTER TABLE `%s` modify (%s) VARCHAR(32);' % (table_name, primary_keys))
-            con.execute('ALTER IGNORE TABLE `%s` ADD PRIMARY KEY (%s);' % (table_name, primary_keys))
+    data.to_sql(table_name, con=engine, if_exists='replace',dtype={'code': NVARCHAR(data.index.get_level_values('code').str.len().max())})
 
-def init_stocks():
+def init_stock_basics():
     df = ts.get_stock_basics()
-    # df.name = df.name.str.decode("GB2312")
-    print [df.name[0]]
     insert_db(df, 'ts_stock_basics', '`id`')
 
+def init_stocks_days():
+    pass
+    
 if __name__ == '__main__':
-    init_stocks()
+    init_stock_basics()
