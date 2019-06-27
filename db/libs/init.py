@@ -34,17 +34,18 @@ def init_engine():
     return create_engine(DB_CONN_URI_DEFAULT, encoding='utf-8', echo=False, convert_unicode=True)
 
 #定义通用方法函数，插入数据库表，并创建数据库主键，保证重跑数据的时候索引唯一。
-def insert_db(data, table_name, primary_keys):
+def insert_db(data, table_name, multi_index):
     engine = init_engine()
-    data.to_sql(table_name, con=engine, if_exists='append',dtype={'code': NVARCHAR(16), 'date': NVARCHAR(16)})
+    data.to_sql(table_name, con=engine, if_exists='append',dtype={'code': NVARCHAR(16), 'date': NVARCHAR(16)}, index_label=multi_index )
 
 def init_stock_basics():
     df = ts.get_stock_basics()
-    insert_db(df, 'ts_stock_basics', '`id`')
+    insert_db(df, 'ts_stock_basics', 'code')
 
 def init_stock_days():
     failed = []
     table_name = 'ts_stock_days'
+    indexs = ['date', 'code']
     # stock_days_df = ts.get_hist_data()
     engine = init_engine()
     sql = 'select code from ts_stock_basics;'
@@ -57,8 +58,13 @@ def init_stock_days():
             failed.append(code)
             print 'Insert', code, 'days data failed ..'
             continue
+        # stock_days_df['date'] = stock_days_df.index
         stock_days_df['code'] = pd.Series(code, index=stock_days_df.index)
-        insert_db(stock_days_df, table_name, '`id`')
+        stock_days_df.reset_index(level=0, inplace=True)
+        print stock_days_df
+        stock_days_df.set_index(indexs, inplace=True)
+        print stock_days_df
+        insert_db(stock_days_df, table_name, indexs)
         print 'Insert', code, 'days data success ..'
     else:
         print failed
